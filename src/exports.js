@@ -52,25 +52,25 @@ const StyleSheetServer = {
             },
         };
     },
-};
+    renderStaticAsync(promisedRenderFunc /* : PromisedRenderFunction */) {
+        return new Promise((resolve) => {
+            reset();
+            startBuffering();
+            promisedRenderFunc()
+                .then((html) => {
+                    const cssContent = flushToString();
 
-/**
- * Utilities for using Aphrodite server-side with an asynchronous render function.
- */
-const StyleSheetServerAsync = {
-    renderStatic(promisedRenderFunc /* : PromisedRenderFunction */) {
-        reset();
-        startBuffering();
-        const html = promisedRenderFunc().then(() => {
-            const cssContent = flushToString();
-
-            return {
-                html: html,
-                css: {
-                    content: cssContent,
-                    renderedClassNames: getRenderedClassNames(),
-                },
-            }
+                    resolve({
+                        html: html,
+                        css: {
+                            content: cssContent,
+                            renderedClassNames: getRenderedClassNames(),
+                        },
+                    })
+                })
+                .catch((error) => {
+                    throw new Error(error);
+                });
         });
     },
 };

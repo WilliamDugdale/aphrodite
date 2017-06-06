@@ -486,6 +486,159 @@ describe('StyleSheetServer.renderStatic', () => {
     });
 });
 
+describe('StyleSheetServer.renderStaticAsync', () => {
+    const sheet = StyleSheet.create({
+        red: {
+            color: 'red',
+        },
+
+        blue: {
+            color: 'blue',
+        },
+
+        green: {
+            color: 'green',
+        },
+    });
+
+    it('returns the correct data', () => {
+        const render = () => {
+            return new Promise((resolve) => {
+                css(sheet.red);
+                css(sheet.blue);
+
+                resolve("html!");
+            });
+        };
+
+        StyleSheetServer.renderStaticAsync(render)
+            .then((ret) => {
+                assert.equal(ret.html, "html!");
+
+                assert.include(ret.css.content, `.${sheet.red._name}{`);
+                assert.include(ret.css.content, `.${sheet.blue._name}{`);
+                assert.match(ret.css.content, /color:red/);
+                assert.match(ret.css.content, /color:blue/);
+
+                assert.include(ret.css.renderedClassNames, sheet.red._name);
+                assert.include(ret.css.renderedClassNames, sheet.blue._name);
+            });
+    });
+
+    // it('succeeds even if a previous renderStatic crashed', () => {
+    //     const badRender = () => {
+    //         return new Promise((resolve) => {
+    //             css(sheet.red);
+    //             css(sheet.blue);
+    //             resolve("boo!");
+    //         });
+    //     };
+
+    //     const goodRender = () => {
+    //         return new Promise((resolve) => {
+    //             css(sheet.blue);
+    //             resolve("html!");
+    //         });
+    //     };
+
+    //     assert.throws(() => {
+    //         StyleSheetServer.renderStaticAsync(badRender);
+    //     }, "boo!");
+
+    //     StyleSheetServer.renderStaticAsync(goodRender)
+    //         .then((ret) => {
+    //             assert.equal(ret.html, "html!");
+
+    //             assert.include(ret.css.content, `.${sheet.blue._name}{`);
+    //             assert.notInclude(ret.css.content, `.${sheet.red._name}{`);
+    //             assert.include(ret.css.content, 'color:blue');
+    //             assert.notInclude(ret.css.content, 'color:red');
+
+    //             assert.include(ret.css.renderedClassNames, sheet.blue._name);
+    //             assert.notInclude(ret.css.renderedClassNames, sheet.red._name);
+    //         });
+    // });
+
+    it('doesn\'t mistakenly return styles if called a second time', () => {
+        const render = () => {
+            return new Promise((resolve) => {
+                css(sheet.red);
+                css(sheet.blue);
+
+                resolve("html!");
+            });
+        };
+
+        const emptyRender = () => {
+            return new Promise((resolve) => {
+                resolve("");
+            });
+        };
+
+        StyleSheetServer.renderStaticAsync(render)
+            .then((ret) => {
+                assert.notEqual(ret.css.content, "");
+            });
+
+        StyleSheetServer.renderStaticAsync(emptyRender)
+            .then((newRet) => {
+                assert.equal(newRet.css.content, "");
+            });
+    });
+
+    it('should inject unique font-faces by src', () => {
+        const fontSheet = StyleSheet.create({
+            test: {
+                fontFamily: [{
+                    fontStyle: "normal",
+                    fontWeight: "normal",
+                    fontFamily: "My Font",
+                    src: 'url(blah) format("woff"), url(blah) format("truetype")'
+                }, {
+                    fontStyle: "italic",
+                    fontWeight: "normal",
+                    fontFamily: "My Font",
+                    src: 'url(blahitalic) format("woff"), url(blahitalic) format("truetype")'
+                }],
+            },
+
+            anotherTest: {
+                fontFamily: [{
+                    fontStyle: "normal",
+                    fontWeight: "normal",
+                    fontFamily: "My Font",
+                    src: 'url(blah) format("woff"), url(blah) format("truetype")'
+                }, {
+                    fontStyle: "normal",
+                    fontWeight: "normal",
+                    fontFamily: "My Other Font",
+                    src: 'url(other-font) format("woff"), url(other-font) format("truetype")',
+                }],
+            },
+        });
+
+        const render = () => {
+            return new Promise((resolve) => {
+                css(fontSheet.test);
+                css(fontSheet.anotherTest);
+                resolve("html!");
+            });
+        };
+
+        StyleSheetServer.renderStaticAsync(render)
+            .then((ret) => {
+                // 3 unique @font-faces should be added
+                assert.equal(3, ret.css.content.match(/@font\-face/g).length);
+
+                assert.include(ret.css.content, "font-style:normal");
+                assert.include(ret.css.content, "font-style:italic");
+
+                assert.include(ret.css.content, 'font-family:"My Font"');
+                assert.include(ret.css.content, 'font-family:"My Font","My Other Font"');
+            });
+    });
+});
+
 describe('StyleSheetTestUtils.suppressStyleInjection', () => {
     beforeEach(() => {
         StyleSheetTestUtils.suppressStyleInjection();
