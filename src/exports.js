@@ -55,6 +55,27 @@ const StyleSheetServer = {
 };
 
 /**
+ * Utilities for using Aphrodite server-side with an asynchronous render function.
+ */
+const StyleSheetServerAsync = {
+    renderStatic(promisedRenderFunc /* : PromisedRenderFunction */) {
+        reset();
+        startBuffering();
+        const html = promisedRenderFunc().then(() => {
+            const cssContent = flushToString();
+
+            return {
+                html: html,
+                css: {
+                    content: cssContent,
+                    renderedClassNames: getRenderedClassNames(),
+                },
+            }
+        });
+    },
+};
+
+/**
  * Utilities for using Aphrodite in tests.
  *
  * Not meant to be used in production.
