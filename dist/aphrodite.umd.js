@@ -1511,26 +1511,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	                renderedClassNames: (0, _inject.getRenderedClassNames)()
 	            }
 	        };
-	    }
-	};
+	    },
+	    renderStaticAsync: function renderStaticAsync(promisedRenderFunc /* : PromisedRenderFunction */) {
+	        return new Promise(function (resolve) {
+	            (0, _inject.reset)();
+	            (0, _inject.startBuffering)();
+	            promisedRenderFunc().then(function (html) {
+	                var cssContent = (0, _inject.flushToString)();
 	
-	/**
-	 * Utilities for using Aphrodite server-side with an asynchronous render function.
-	 */
-	var StyleSheetServerAsync = {
-	    renderStatic: function renderStatic(promisedRenderFunc /* : PromisedRenderFunction */) {
-	        (0, _inject.reset)();
-	        (0, _inject.startBuffering)();
-	        var html = promisedRenderFunc().then(function () {
-	            var cssContent = (0, _inject.flushToString)();
-	
-	            return {
-	                html: html,
-	                css: {
-	                    content: cssContent,
-	                    renderedClassNames: (0, _inject.getRenderedClassNames)()
-	                }
-	            };
+	                resolve({
+	                    html: html,
+	                    css: {
+	                        content: cssContent,
+	                        renderedClassNames: (0, _inject.getRenderedClassNames)()
+	                    }
+	                });
+	            })['catch'](function (error) {
+	                throw new Error(error);
+	            });
 	        });
 	    }
 	};
